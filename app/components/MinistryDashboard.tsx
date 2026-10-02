@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useRef } from "react";
+import { FormattedSarthiAnswer } from "./FormattedMarkdown";
 
 interface MinistryDashboardProps {
   onBack?: () => void;
@@ -130,6 +131,7 @@ export default function MinistryDashboard({ onBack, onChooseRole, onAskSarthi, o
 
   // Sarthi AI Drawer
   const [sarthiOpen, setSarthiOpen] = useState(false);
+  const [sarthiLanguage, setSarthiLanguage] = useState<"en" | "hi">("en");
   const [sarthiQuery, setSarthiQuery] = useState("");
   const [sarthiResponse, setSarthiResponse] = useState("");
   const [sarthiLoading, setSarthiLoading] = useState(false);
@@ -144,9 +146,10 @@ export default function MinistryDashboard({ onBack, onChooseRole, onAskSarthi, o
     }, 3800);
   };
 
-  const handleAskSarthi = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sarthiQuery.trim()) return;
+  const handleAskSarthi = async (e: React.FormEvent, customQuery?: string) => {
+    if (e?.preventDefault) e.preventDefault();
+    const queryToSend = (typeof customQuery === "string" ? customQuery : sarthiQuery).trim();
+    if (!queryToSend) return;
     setSarthiLoading(true);
     setSarthiResponse("");
     try {
@@ -154,13 +157,14 @@ export default function MinistryDashboard({ onBack, onChooseRole, onAskSarthi, o
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: sarthiQuery,
+          message: queryToSend,
           role: "Ministry",
+          language: sarthiLanguage,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not get a response.");
-      setSarthiResponse(data.answer);
+      if (!res.ok && !data.answer) throw new Error(data.error || "Could not get a response.");
+      setSarthiResponse(data.answer || "No response received.");
     } catch (err) {
       setSarthiResponse(err instanceof Error ? err.message : "Error querying Sarthi AI.");
     } finally {
@@ -734,46 +738,117 @@ export default function MinistryDashboard({ onBack, onChooseRole, onAskSarthi, o
             <div className="ind-sarthi-title-wrap">
               <div className="ind-sarthi-badge">✳</div>
               <div>
-                <h3>Sarthi AI Guide (Ministry)</h3>
-                <small>Powered by Gemini · District workforce planning</small>
+                <h3>{sarthiLanguage === "hi" ? "सारथी AI सलाहकार (मंत्रालय)" : "Sarthi AI Guide (Ministry)"}</h3>
+                <small>{sarthiLanguage === "hi" ? "Gemini-संचालित · जिला कार्यबल नियोजन" : "Powered by Gemini · District workforce planning"}</small>
               </div>
             </div>
-            <button className="ind-drawer-close" onClick={() => setSarthiOpen(false)}>✕</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div className="yw-chat-language-toggle" aria-label="Language selection" style={{ display: "flex", border: "1px solid #d8e9e6", borderRadius: "999px", overflow: "hidden", background: "#f6fbfa" }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "11px",
+                    fontWeight: sarthiLanguage === "en" ? 700 : 500,
+                    background: sarthiLanguage === "en" ? "#087f78" : "transparent",
+                    color: sarthiLanguage === "en" ? "#fff" : "#4b6066",
+                    border: 0,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSarthiLanguage("en")}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "11px",
+                    fontWeight: sarthiLanguage === "hi" ? 700 : 500,
+                    background: sarthiLanguage === "hi" ? "#087f78" : "transparent",
+                    color: sarthiLanguage === "hi" ? "#fff" : "#4b6066",
+                    border: 0,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSarthiLanguage("hi")}
+                >
+                  हिन्दी
+                </button>
+              </div>
+              <button className="ind-drawer-close" onClick={() => setSarthiOpen(false)}>✕</button>
+            </div>
           </div>
 
           <div className="ind-sarthi-body">
             <div className="ind-sarthi-hints">
-              <button
-                className="ind-hint-chip"
-                onClick={() => setSarthiQuery("Analyze skill gap index (62) for Kolhapur District and suggest fast-track vocational capacity additions.")}
-              >
-                Analyze Kolhapur Skill Gap (62) ↗
-              </button>
-              <button
-                className="ind-hint-chip"
-                onClick={() => setSarthiQuery("How can Govt ITI Kolhapur coordinate with Shiroli & Gokul Shirgaon MIDC for auto-component apprenticeship expansion?")}
-              >
-                ITI - MIDC Apprenticeship Plan ↗
-              </button>
+              {sarthiLanguage === "hi" ? (
+                <>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "कोल्हापुर जिले के कौशल अंतर सूचकांक (62) का विश्लेषण करें और त्वरित क्षमता वृद्धि के उपाय बताएं।";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    कौशल अंतर (62) विश्लेषण ↗
+                  </button>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "राजकीय ITI कोल्हापुर और शिरोली-गोकुल शिरगांव MIDC के बीच अप्रेंटिसशिप विस्तार योजना कैसे बनेगी?";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    ITI - MIDC अप्रेंटिसशिप ↗
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "Analyze skill gap index (62) for Kolhapur District and suggest fast-track vocational capacity additions.";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    Analyze Kolhapur Skill Gap (62) ↗
+                  </button>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "How can Govt ITI Kolhapur coordinate with Shiroli & Gokul Shirgaon MIDC for auto-component apprenticeship expansion?";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    ITI - MIDC Apprenticeship Plan ↗
+                  </button>
+                </>
+              )}
             </div>
 
             <form onSubmit={handleAskSarthi} className="ind-sarthi-form">
               <textarea
                 value={sarthiQuery}
                 onChange={(e) => setSarthiQuery(e.target.value)}
-                placeholder="Ask Sarthi about district workforce signals, ITI outcomes, or industry belt alignment..."
+                placeholder={sarthiLanguage === "hi" ? "जिला कार्यबल संकेत, ITI परिणाम या औद्योगिक क्लस्टर पर प्रश्न पूछें..." : "Ask Sarthi about district workforce signals, ITI outcomes, or industry belt alignment..."}
                 rows={3}
                 className="ind-sarthi-textarea"
               />
               <button type="submit" disabled={sarthiLoading} className="ind-sarthi-submit-btn">
-                {sarthiLoading ? "Consulting Sarthi..." : "Ask Sarthi ↗"}
+                {sarthiLoading ? (sarthiLanguage === "hi" ? "सारथी से परामर्श ले रहे हैं..." : "Consulting Sarthi...") : (sarthiLanguage === "hi" ? "सारथी से पूछें ↗" : "Ask Sarthi ↗")}
               </button>
             </form>
 
             {sarthiResponse && (
               <div className="ind-sarthi-answer-box">
-                <h4>Sarthi's Strategic Guidance</h4>
-                <div className="ind-sarthi-answer-text">{sarthiResponse}</div>
+                <h4>{sarthiLanguage === "hi" ? "सारथी का रणनीतिक मार्गदर्शन" : "Sarthi's Strategic Guidance"}</h4>
+                <div className="ind-sarthi-answer-text">
+                  <FormattedSarthiAnswer text={sarthiResponse} />
+                </div>
               </div>
             )}
           </div>

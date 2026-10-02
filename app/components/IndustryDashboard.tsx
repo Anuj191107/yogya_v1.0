@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { FormattedSarthiAnswer } from "./FormattedMarkdown";
 
 interface IndustryDashboardProps {
   onBack: () => void;
@@ -28,6 +29,7 @@ export default function IndustryDashboard({ onBack, onChooseRole, onOpenSarthi }
   
   // Sarthi AI inside dashboard
   const [sarthiOpen, setSarthiOpen] = useState(false);
+  const [sarthiLanguage, setSarthiLanguage] = useState<"en" | "hi">("en");
   const [sarthiQuery, setSarthiQuery] = useState("");
   const [sarthiResponse, setSarthiResponse] = useState("");
   const [sarthiLoading, setSarthiLoading] = useState(false);
@@ -109,9 +111,10 @@ export default function IndustryDashboard({ onBack, onChooseRole, onOpenSarthi }
     showToast("Curriculum update proposal transmitted to Govt ITI Kolhapur Board of Studies.");
   };
 
-  const handleAskSarthi = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sarthiQuery.trim()) return;
+  const handleAskSarthi = async (e: React.FormEvent, customQuery?: string) => {
+    if (e?.preventDefault) e.preventDefault();
+    const queryToSend = (typeof customQuery === "string" ? customQuery : sarthiQuery).trim();
+    if (!queryToSend) return;
     setSarthiLoading(true);
     setSarthiResponse("");
     try {
@@ -119,13 +122,14 @@ export default function IndustryDashboard({ onBack, onChooseRole, onOpenSarthi }
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: sarthiQuery,
+          message: queryToSend,
           role: "Industry",
+          language: sarthiLanguage,
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not get a response.");
-      setSarthiResponse(data.answer);
+      if (!res.ok && !data.answer) throw new Error(data.error || "Could not get a response.");
+      setSarthiResponse(data.answer || "No response received.");
     } catch (err) {
       setSarthiResponse(err instanceof Error ? err.message : "Error querying Sarthi AI.");
     } finally {
@@ -1092,46 +1096,117 @@ export default function IndustryDashboard({ onBack, onChooseRole, onOpenSarthi }
             <div className="ind-sarthi-title-wrap">
               <div className="ind-sarthi-badge">✳</div>
               <div>
-                <h3>Sarthi AI Guide (Industry)</h3>
-                <small>Powered by Gemini · Real-time workforce advisor</small>
+                <h3>{sarthiLanguage === "hi" ? "सारथी AI सलाहकार (उद्योग)" : "Sarthi AI Guide (Industry)"}</h3>
+                <small>{sarthiLanguage === "hi" ? "Gemini-संचालित · कार्यबल सलाहकार" : "Powered by Gemini · Real-time workforce advisor"}</small>
               </div>
             </div>
-            <button className="ind-drawer-close" onClick={() => setSarthiOpen(false)}>✕</button>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <div className="yw-chat-language-toggle" aria-label="Language selection" style={{ display: "flex", border: "1px solid #d8e9e6", borderRadius: "999px", overflow: "hidden", background: "#f6fbfa" }}>
+                <button
+                  type="button"
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "11px",
+                    fontWeight: sarthiLanguage === "en" ? 700 : 500,
+                    background: sarthiLanguage === "en" ? "#087f78" : "transparent",
+                    color: sarthiLanguage === "en" ? "#fff" : "#4b6066",
+                    border: 0,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSarthiLanguage("en")}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  style={{
+                    padding: "3px 8px",
+                    fontSize: "11px",
+                    fontWeight: sarthiLanguage === "hi" ? 700 : 500,
+                    background: sarthiLanguage === "hi" ? "#087f78" : "transparent",
+                    color: sarthiLanguage === "hi" ? "#fff" : "#4b6066",
+                    border: 0,
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSarthiLanguage("hi")}
+                >
+                  हिन्दी
+                </button>
+              </div>
+              <button className="ind-drawer-close" onClick={() => setSarthiOpen(false)}>✕</button>
+            </div>
           </div>
 
           <div className="ind-sarthi-body">
             <div className="ind-sarthi-hints">
-              <button
-                className="ind-hint-chip"
-                onClick={() => setSarthiQuery("Recommend practical candidate filtering criteria for CNC operator positions at Gokul Auto.")}
-              >
-                CNC candidate filtering criteria ↗
-              </button>
-              <button
-                className="ind-hint-chip"
-                onClick={() => setSarthiQuery("What syllabus additions would make Govt ITI Kolhapur welders immediately job-ready for MIG/TIG?")}
-              >
-                Welding syllabus improvements ↗
-              </button>
+              {sarthiLanguage === "hi" ? (
+                <>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "गोकुल ऑटो के लिए CNC ऑपरेटर उम्मीदवारों के व्यावहारिक चयन मानदंड क्या होने चाहिए?";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    CNC चयन मानदंड ↗
+                  </button>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "राजकीय ITI कोल्हापुर के वेल्डिंग ट्रेड में MIG/TIG के क्या पाठ्यक्रम संशोधन आवश्यक हैं?";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    वेल्डिंग पाठ्यक्रम सुधार ↗
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "Recommend practical candidate filtering criteria for CNC operator positions at Gokul Auto.";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    CNC candidate filtering criteria ↗
+                  </button>
+                  <button
+                    className="ind-hint-chip"
+                    onClick={() => {
+                      const q = "What syllabus additions would make Govt ITI Kolhapur welders immediately job-ready for MIG/TIG?";
+                      setSarthiQuery(q);
+                      handleAskSarthi(null as any, q);
+                    }}
+                  >
+                    Welding syllabus improvements ↗
+                  </button>
+                </>
+              )}
             </div>
 
             <form onSubmit={handleAskSarthi} className="ind-sarthi-form">
               <textarea
                 value={sarthiQuery}
                 onChange={(e) => setSarthiQuery(e.target.value)}
-                placeholder="Ask Sarthi about talent matches, skill gaps, or syllabus adjustments..."
+                placeholder={sarthiLanguage === "hi" ? "उम्मीदवार चयन, कौशल आवश्यकता या पाठ्यक्रम सुझाव पूछें..." : "Ask Sarthi about talent matches, skill gaps, or syllabus adjustments..."}
                 rows={3}
                 className="ind-sarthi-textarea"
               />
               <button type="submit" disabled={sarthiLoading} className="ind-sarthi-submit-btn">
-                {sarthiLoading ? "Consulting Sarthi..." : "Ask Sarthi ↗"}
+                {sarthiLoading ? (sarthiLanguage === "hi" ? "सारथी से परामर्श ले रहे हैं..." : "Consulting Sarthi...") : (sarthiLanguage === "hi" ? "सारथी से पूछें ↗" : "Ask Sarthi ↗")}
               </button>
             </form>
 
             {sarthiResponse && (
               <div className="ind-sarthi-answer-box">
-                <h4>Sarthi's Guidance</h4>
-                <div className="ind-sarthi-answer-text">{sarthiResponse}</div>
+                <h4>{sarthiLanguage === "hi" ? "सारथी का मार्गदर्शन" : "Sarthi's Guidance"}</h4>
+                <div className="ind-sarthi-answer-text">
+                  <FormattedSarthiAnswer text={sarthiResponse} />
+                </div>
               </div>
             )}
           </div>

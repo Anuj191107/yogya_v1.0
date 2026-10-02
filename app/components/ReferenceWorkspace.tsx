@@ -4,6 +4,8 @@ import React, { useEffect, useMemo, useState } from "react";
 import MinistryDashboard from "./MinistryDashboard";
 import IndustryDashboard from "./IndustryDashboard";
 
+import { FormattedSarthiAnswer } from "./FormattedMarkdown";
+
 type Role = "Trainee" | "Trainer" | "Institute" | "Industry" | "Ministry";
 type View = "Dashboard" | "Simulation" | "Guidance";
 
@@ -149,8 +151,17 @@ export default function ReferenceWorkspace({ role: initialRole, onBack, onChoose
       <div className="yw-webchat-messages" aria-live="polite">
         <div className="yw-webchat-message bot"><span className="yw-webchat-mini-avatar">✳</span><div><small>{hindi ? `सारथी · ${chatRole} सहायक` : `Sarthi · ${chatRole} assistant`}</small><p>{hindi ? "मैं आपके कौशल, प्रशिक्षण और अवसरों से जुड़े सवालों में मदद कर सकता हूँ। अपना प्रश्न लिखें या नीचे दिए गए सुझाव चुनें।" : botIntro}</p></div></div>
         {asked && <div className="yw-webchat-message user"><div><small>You</small><p>{asked}</p></div></div>}
-        {reply && <div className="yw-webchat-message bot"><span className="yw-webchat-mini-avatar">✳</span><div><small>Sarthi</small><p>{reply}</p></div></div>}
-        {phoneLoading === chatRole && <div className="yw-webchat-message bot"><span className="yw-webchat-mini-avatar">✳</span><div><small>Sarthi</small><p className="yw-webchat-thinking">Thinking through your question…</p></div></div>}
+        {reply && (
+          <div className="yw-webchat-message bot">
+            <span className="yw-webchat-mini-avatar">✳</span>
+            <div>
+              <small>{hindi ? "सारथी" : "Sarthi"}</small>
+              <div className="yw-webchat-bubble">
+                <FormattedSarthiAnswer text={reply} />
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <div className="yw-webchat-suggestions"><span>{hindi ? "यह पूछकर देखें" : "Try asking"}</span>{cfg.chips.map(chip => <button type="button" key={chip} onClick={() => setPhoneDrafts(current => ({ ...current, [chatRole]: chip }))}>{hindi ? (chip === "What should I learn next?" ? "अब मुझे क्या सीखना चाहिए?" : chip === "Help me prepare for CNC" ? "CNC की तैयारी में मदद करें" : chip === "Plan today's class" ? "आज की कक्षा की योजना" : chip === "Create a recap activity" ? "दोहराव गतिविधि बनाएं" : chip === "Find welder candidates" ? "वेल्डर उम्मीदवार खोजें" : chip === "Write a skill requirement" ? "कौशल आवश्यकता लिखें" : chip === "Review placement readiness" ? "प्लेसमेंट तैयारी देखें" : chip === "Suggest course updates" ? "पाठ्यक्रम सुझाव दें" : chip === "Summarise district gaps" ? "जिले के कौशल अंतर बताएं" : "संस्थानों को किस सहायता की ज़रूरत है?" ) : chip}</button>)}</div>
       <form className="yw-webchat-compose" onSubmit={e => askPhoneSarthi(e, chatRole)}><textarea aria-label={`Ask Sarthi as ${chatRole}`} rows={2} value={phoneDrafts[chatRole]} onChange={e => setPhoneDrafts(current => ({ ...current, [chatRole]: e.target.value }))} placeholder={hindi ? `${cfg.title} से प्रश्न पूछें…` : `Ask ${cfg.title} a question…`} /><button type="submit" disabled={phoneLoading !== null || !phoneDrafts[chatRole].trim()}>{phoneLoading === chatRole ? (hindi ? "भेज रहे हैं…" : "Sending…") : (hindi ? "संदेश भेजें ↑" : "Send message ↑")}</button></form>

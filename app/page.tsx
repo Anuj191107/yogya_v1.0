@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import ReferenceWorkspace from "./components/ReferenceWorkspace";
+import { FormattedSarthiAnswer } from "./components/FormattedMarkdown";
 import "./components/reference-workspace.css";
 
 type Role = "Trainee" | "Trainer" | "Institute" | "Industry" | "Ministry";
@@ -14,22 +15,14 @@ const roles: { name: Role; icon: string; detail: string }[] = [
   { name: "Ministry", icon: "📍", detail: "Explore district-level workforce insights" },
 ];
 
-const dashboardData: Record<Role, { title: string; subtitle: string; stats: [string, string][]; tasks: string[] }> = {
-  Trainee: { title: "Your growth dashboard", subtitle: "A clearer path from learning to meaningful work.", stats: [["Skills matched", "8"], ["Learning progress", "72%"], ["Projects available", "12"]], tasks: ["Complete your skill profile", "Explore a municipal project", "Review your AI career roadmap"] },
-  Trainer: { title: "Trainer workspace", subtitle: "Keep learning practical and aligned with industry.", stats: [["Learners", "124"], ["Skills to refresh", "6"], ["Resources", "18"]], tasks: ["Review emerging skill alerts", "Open a simulation exercise", "Plan an alumni-led workshop"] },
-  Institute: { title: "Institute overview", subtitle: "Connect course capacity with changing skill demand.", stats: [["Learners tracked", "1,240"], ["Placement readiness", "78%"], ["Programs reviewed", "14"]], tasks: ["Review course-to-skill alignment", "Check lab and trainer capacity", "View placement trends"] },
-  Industry: { title: "Industry talent hub", subtitle: "Find relevant skills and connect with emerging talent.", stats: [["Matched candidates", "48"], ["Skills in demand", "12"], ["Open projects", "5"]], tasks: ["Browse candidate matches", "Post a sample project", "Review district skill signals"] },
-  Ministry: { title: "District skill intelligence", subtitle: "Turn workforce signals into evidence-led planning.", stats: [["Institutions", "32"], ["Priority skills", "16"], ["Projects tracked", "27"]], tasks: ["Review district demand", "Compare institutional outcomes", "Explore local project impact"] },
-};
-
 export default function Home() {
   const [role, setRole] = useState<Role | null>(null);
   const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [chatLang, setChatLang] = useState<"en" | "hi">("en");
   const [question, setQuestion] = useState("");
   const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
-  const [notice, setNotice] = useState("");
 
   function syncUrl(url: string, replace = false) {
     if (typeof window === "undefined") return;
@@ -62,20 +55,21 @@ export default function Home() {
     return () => window.removeEventListener("popstate", readLocation);
   }, []);
 
-  async function askGemini(e: React.FormEvent) {
-    e.preventDefault();
-    if (!question.trim()) return;
-    setLoading(true); setAnswer(""); setNotice("");
+  async function askGemini(e: React.FormEvent, customQ?: string) {
+    if (e?.preventDefault) e.preventDefault();
+    const q = (typeof customQ === "string" ? customQ : question).trim();
+    if (!q) return;
+    setLoading(true); setAnswer("");
     try {
       const res = await fetch("/api/chat", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: question, role: role ?? "Trainee" }),
+        body: JSON.stringify({ message: q, role: "Trainee", language: chatLang }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Could not get a response.");
-      setAnswer(data.answer);
+      if (!res.ok && !data.answer) throw new Error(data.error || "Could not get a response.");
+      setAnswer(data.answer || "No response received.");
     } catch (err) {
-      setNotice(err instanceof Error ? err.message : "Something went wrong.");
+      setAnswer(err instanceof Error ? err.message : "Something went wrong.");
     } finally { setLoading(false); }
   }
 
@@ -122,6 +116,164 @@ export default function Home() {
               <article><span className="feature-icon">◎</span><h3>Find your people</h3><p>Connect learners, educators, and employers around shared goals.</p></article>
             </div>
           </section>
+
+          {/* Floating Sarthi Button on Landing Page */}
+          <div style={{ position: "fixed", bottom: "24px", right: "24px", zIndex: 90 }}>
+            <button
+              onClick={() => setChatOpen(true)}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                background: "#087f78",
+                color: "#ffffff",
+                border: "1px solid #066963",
+                borderRadius: "999px",
+                padding: "12px 18px",
+                fontSize: "13px",
+                fontWeight: 650,
+                boxShadow: "0 8px 24px rgba(8, 127, 120, 0.35)",
+                cursor: "pointer",
+              }}
+            >
+              <span style={{ fontSize: "16px" }}>✳</span>
+              <span>Ask Sarthi AI Guide</span>
+            </button>
+          </div>
+
+          {/* Landing Page Sarthi Modal */}
+          {chatOpen && (
+            <div className="ind-modal-overlay" onClick={() => setChatOpen(false)}>
+              <div
+                className="ind-drawer-right"
+                onClick={(e) => e.stopPropagation()}
+                style={{ width: "min(460px, 95vw)", display: "flex", flexDirection: "column" }}
+              >
+                <div className="ind-modal-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ fontSize: "20px", color: "#087f78" }}>✳</span>
+                    <div>
+                      <h3 style={{ margin: 0, fontSize: "15px" }}>{chatLang === "hi" ? "सारथी AI मार्गदर्शक" : "Sarthi AI Platform Guide"}</h3>
+                      <small style={{ color: "#64748b" }}>{chatLang === "hi" ? "Gemini-संचालित राष्ट्रीय कौशल सलाहकार" : "Powered by Gemini · National Skills Advisor"}</small>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <div style={{ display: "flex", border: "1px solid #d8e9e6", borderRadius: "999px", overflow: "hidden", background: "#f6fbfa" }}>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "3px 8px",
+                          fontSize: "11px",
+                          fontWeight: chatLang === "en" ? 700 : 500,
+                          background: chatLang === "en" ? "#087f78" : "transparent",
+                          color: chatLang === "en" ? "#fff" : "#4b6066",
+                          border: 0,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setChatLang("en")}
+                      >
+                        EN
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          padding: "3px 8px",
+                          fontSize: "11px",
+                          fontWeight: chatLang === "hi" ? 700 : 500,
+                          background: chatLang === "hi" ? "#087f78" : "transparent",
+                          color: chatLang === "hi" ? "#fff" : "#4b6066",
+                          border: 0,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => setChatLang("hi")}
+                      >
+                        हिन्दी
+                      </button>
+                    </div>
+                    <button onClick={() => setChatOpen(false)} style={{ background: "transparent", border: 0, fontSize: "18px", cursor: "pointer", color: "#64748b" }}>✕</button>
+                  </div>
+                </div>
+
+                <div style={{ padding: "16px", flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "14px" }}>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                    {chatLang === "hi" ? (
+                      <>
+                        <button
+                          type="button"
+                          className="ind-hint-chip"
+                          onClick={() => {
+                            const q = "योग्या प्लेटफॉर्म क्या है और यह युवाओं के कौशल में कैसे मदद करता है?";
+                            setQuestion(q);
+                            askGemini(null as any, q);
+                          }}
+                        >
+                          योग्या प्लेटफॉर्म क्या है? ↗
+                        </button>
+                        <button
+                          type="button"
+                          className="ind-hint-chip"
+                          onClick={() => {
+                            const q = "NSQF लेवल 4 और 5 सर्टिफिकेशन के क्या लाभ हैं?";
+                            setQuestion(q);
+                            askGemini(null as any, q);
+                          }}
+                        >
+                          NSQF सर्टिफिकेशन लाभ ↗
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          className="ind-hint-chip"
+                          onClick={() => {
+                            const q = "What is Yogya and how does it bridge skills with industry jobs?";
+                            setQuestion(q);
+                            askGemini(null as any, q);
+                          }}
+                        >
+                          What is Yogya? ↗
+                        </button>
+                        <button
+                          type="button"
+                          className="ind-hint-chip"
+                          onClick={() => {
+                            const q = "How do NSQF Level 4/5 certifications work in manufacturing?";
+                            setQuestion(q);
+                            askGemini(null as any, q);
+                          }}
+                        >
+                          NSQF certification benefits ↗
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  <form onSubmit={askGemini} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    <textarea
+                      rows={3}
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      placeholder={chatLang === "hi" ? "सारथी से कोई भी प्रश्न पूछें..." : "Ask Sarthi anything about skills, certifications, or roles..."}
+                      className="ind-sarthi-textarea"
+                    />
+                    <button type="submit" disabled={loading} className="ind-sarthi-submit-btn">
+                      {loading ? (chatLang === "hi" ? "उत्तर तैयार कर रहे हैं..." : "Consulting Sarthi...") : (chatLang === "hi" ? "प्रश्न पूछें ↗" : "Ask Sarthi ↗")}
+                    </button>
+                  </form>
+
+                  {answer && (
+                    <div className="ind-sarthi-answer-box">
+                      <h4>{chatLang === "hi" ? "सारथी का उत्तर" : "Sarthi's Guidance"}</h4>
+                      <div className="ind-sarthi-answer-text">
+                        <FormattedSarthiAnswer text={answer} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           <footer className="footer"><a className="brand" href="#"><span className="brand-mark">Y</span> yogya<span className="brand-dot">.</span></a><span>Skills today. Possibilities tomorrow.</span><span>Demo prototype · 2026</span></footer>
         </>
