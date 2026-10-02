@@ -1,0 +1,98 @@
+"use client";
+
+import { useState } from "react";
+
+type Role = "Trainee" | "Trainer" | "Institute" | "Industry" | "Ministry";
+
+const roles: { name: Role; icon: string; detail: string }[] = [
+  { name: "Trainee", icon: "🎓", detail: "Build skills, projects, and a career roadmap" },
+  { name: "Trainer", icon: "🧑‍🏫", detail: "Explore industry-aligned teaching resources" },
+  { name: "Institute", icon: "🏛️", detail: "Track outcomes, capacity, and course alignment" },
+  { name: "Industry", icon: "🏭", detail: "Discover verified talent and emerging skills" },
+  { name: "Ministry", icon: "📍", detail: "Explore district-level workforce insights" },
+];
+
+const dashboardData: Record<Role, { title: string; subtitle: string; stats: [string, string][]; tasks: string[] }> = {
+  Trainee: { title: "Your growth dashboard", subtitle: "A clearer path from learning to meaningful work.", stats: [["Skills matched", "8"], ["Learning progress", "72%"], ["Projects available", "12"]], tasks: ["Complete your skill profile", "Explore a municipal project", "Review your AI career roadmap"] },
+  Trainer: { title: "Trainer workspace", subtitle: "Keep learning practical and aligned with industry.", stats: [["Learners", "124"], ["Skills to refresh", "6"], ["Resources", "18"]], tasks: ["Review emerging skill alerts", "Open a simulation exercise", "Plan an alumni-led workshop"] },
+  Institute: { title: "Institute overview", subtitle: "Connect course capacity with changing skill demand.", stats: [["Learners tracked", "1,240"], ["Placement readiness", "78%"], ["Programs reviewed", "14"]], tasks: ["Review course-to-skill alignment", "Check lab and trainer capacity", "View placement trends"] },
+  Industry: { title: "Industry talent hub", subtitle: "Find relevant skills and connect with emerging talent.", stats: [["Matched candidates", "48"], ["Skills in demand", "12"], ["Open projects", "5"]], tasks: ["Browse candidate matches", "Post a sample project", "Review district skill signals"] },
+  Ministry: { title: "District skill intelligence", subtitle: "Turn workforce signals into evidence-led planning.", stats: [["Institutions", "32"], ["Priority skills", "16"], ["Projects tracked", "27"]], tasks: ["Review district demand", "Compare institutional outcomes", "Explore local project impact"] },
+};
+
+export default function Home() {
+  const [role, setRole] = useState<Role | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [notice, setNotice] = useState("");
+
+  async function askGemini(e: React.FormEvent) {
+    e.preventDefault();
+    if (!question.trim()) return;
+    setLoading(true); setAnswer(""); setNotice("");
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: question, role: role ?? "Trainee" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Could not get a response.");
+      setAnswer(data.answer);
+    } catch (err) {
+      setNotice(err instanceof Error ? err.message : "Something went wrong.");
+    } finally { setLoading(false); }
+  }
+
+  return (
+    <main>
+      {!role ? (
+        <>
+          <section className="hero">
+            <nav className="topbar">
+              <a className="brand" href="#" aria-label="Yogya home"><span className="brand-mark">Y</span> yogya<span className="brand-dot">.</span></a>
+              <div className="nav-links"><a href="#how">How it works</a><a href="#ecosystem">Ecosystem</a><button className="nav-cta" onClick={() => document.getElementById("ecosystem")?.scrollIntoView({ behavior: "smooth" })}>Get started ↗</button></div>
+            </nav>
+            <div className="hero-content">
+              <div className="eyebrow"><span className="pulse"></span> SKILLS · EXPERIENCE · OPPORTUNITY</div>
+              <h1>Make your skills<br /> <em>mean something.</em></h1>
+              <p className="hero-copy">A bridge between what the world needs and what you can become. Learn with purpose, build real experience, and move forward with Yogya.</p>
+              <div className="hero-actions"><button className="primary-btn" onClick={() => document.getElementById("ecosystem")?.scrollIntoView({ behavior: "smooth" })}>Explore your path <span>↗</span></button><a className="text-link" href="#how">Discover Yogya <span>↓</span></a></div>
+              <div className="hero-foot"><span>✳ Built for India’s evolving workforce</span><span>Prototype preview · Sample data</span></div>
+            </div>
+            <div className="hero-shade"></div>
+            <div className="hero-index">01 / THE NEXT CHAPTER</div>
+          </section>
+
+          <section className="intro section-wrap" id="how">
+            <div className="section-kicker">A more connected future</div>
+            <div className="intro-grid"><h2>From learning<br />to <em>doing.</em></h2><p>Yogya brings trainees, trainers, institutes, employers, and public planners into one connected ecosystem. So skills grow alongside real opportunities.</p></div>
+            <div className="feature-row">
+              <article><span className="feature-icon">↗</span><h3>Follow the signal</h3><p>Understand which skills are emerging in the job market.</p></article>
+              <article><span className="feature-icon">✳</span><h3>Learn by doing</h3><p>Build evidence through projects and practical simulations.</p></article>
+              <article><span className="feature-icon">◎</span><h3>Find your people</h3><p>Connect learners, educators, and employers around shared goals.</p></article>
+            </div>
+          </section>
+
+          <section className="ecosystem section-wrap" id="ecosystem">
+            <div className="section-kicker">Your Yogya workspace</div>
+            <div className="ecosystem-heading"><h2>One ecosystem.<br /><em>Many ways forward.</em></h2><p>Choose a demo role to explore a working dashboard with sample data.</p></div>
+            <div className="role-grid">{roles.map((item) => <button className="role-card" key={item.name} onClick={() => { setRole(item.name); window.scrollTo({ top: 0, behavior: "smooth" }); }}><span className="role-icon">{item.icon}</span><span className="role-name">{item.name}</span><span className="role-detail">{item.detail}</span><span className="role-arrow">↗</span></button>)}</div>
+          </section>
+          <footer className="footer"><a className="brand" href="#"><span className="brand-mark">Y</span> yogya<span className="brand-dot">.</span></a><span>Skills today. Possibilities tomorrow.</span><span>Demo prototype · 2026</span></footer>
+        </>
+      ) : (
+        <section className="dashboard">
+          <header className="dash-nav"><a className="brand dark-brand" href="#" onClick={(e) => { e.preventDefault(); setRole(null); }}><span className="brand-mark">Y</span> yogya<span className="brand-dot">.</span></a><span className="demo-pill">DEMO WORKSPACE</span><button className="outline-btn" onClick={() => { setRole(null); setChatOpen(false); }}>← All roles</button></header>
+          <div className="dash-body">
+            <div className="dash-welcome"><div><div className="section-kicker">{role} workspace / Overview</div><h1>{dashboardData[role].title}</h1><p>{dashboardData[role].subtitle}</p></div><button className="primary-btn" onClick={() => setChatOpen(!chatOpen)}>✳ Ask Sarthi AI</button></div>
+            <div className="stat-grid">{dashboardData[role].stats.map(([label, value]) => <article className="stat-card" key={label}><span>{label}</span><strong>{value}</strong><small>Sample demo metric</small></article>)}</div>
+            <div className="dash-columns"><section className="panel"><div className="panel-head"><h2>Suggested next steps</h2><span>✳ Personalized</span></div>{dashboardData[role].tasks.map((task, i) => <button className="task-row" key={task} onClick={() => setNotice(`Opened demo task: ${task}`)}><span className="task-num">0{i + 1}</span><span>{task}</span><span className="task-arrow">↗</span></button>)}{notice && <p className="notice">{notice}</p>}</section><section className="panel sarthi-panel"><div className="sarthi-orb">✳</div><div className="section-kicker">YOUR PERSONAL GUIDE</div><h2>Meet Sarthi</h2><p>Ask for a skill roadmap, project idea, or help understanding your next step.</p><button className="secondary-btn" onClick={() => setChatOpen(!chatOpen)}>{chatOpen ? "Close assistant" : "Open assistant"} ↗</button>{chatOpen && <form className="chat-form" onSubmit={askGemini}><label htmlFor="question">Ask Sarthi</label><textarea id="question" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="How can I improve my job readiness?" rows={3} /><button className="primary-btn" disabled={loading}>{loading ? "Thinking..." : "Send question ↗"}</button>{answer && <div className="ai-answer">{answer}</div>}{notice && <p className="notice">{notice}</p>}</form>}</section></div>
+            <p className="disclaimer">This is a prototype using illustrative sample data. Gemini responses work after you add an API key in your local environment.</p>
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
