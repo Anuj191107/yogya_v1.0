@@ -4,4 +4,3 @@ out
 .env*
 !.env.example
 .DS_Store
-.env.*.local
